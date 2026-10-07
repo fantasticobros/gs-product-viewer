@@ -4,7 +4,7 @@ import {SparkRenderer,SplatMesh} from '@sparkjsdev/spark';
 const $=id=>document.getElementById(id),host=$('viewer');
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xffffff,0);host.prepend(renderer.domElement);renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('aria-label','Dra för att rotera 3D-modellen');
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.01,100);camera.position.set(-.95,.55,1.2);
-const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.dampingFactor=.035;orbit.rotateSpeed=.7;orbit.enablePan=false;orbit.minDistance=.6;orbit.maxDistance=4;orbit.maxPolarAngle=Math.PI*.94;orbit.autoRotateSpeed=1.6;orbit.target.set(0,0,0);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.dampingFactor=.035;orbit.rotateSpeed=.7;orbit.enablePan=false;orbit.minDistance=.6;orbit.maxDistance=4;orbit.maxPolarAngle=Math.PI*.94;orbit.autoRotateSpeed=1.6;orbit.autoRotate=true;orbit.target.set(0,0,0);
 scene.add(new SparkRenderer({renderer}));const root=new THREE.Group();scene.add(root);root.rotation.x=-Math.PI/2;
 const bounds=new THREE.Box3(new THREE.Vector3(-.25,-.38,-.3),new THREE.Vector3(.25,.38,.3));const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
 const wire=new THREE.Box3Helper(bounds,0x009bc4);root.add(wire);wire.visible=false;
