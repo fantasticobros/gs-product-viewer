@@ -10,6 +10,10 @@ form.addEventListener('submit',async event=>{
     const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:bytes.slice(0,16),iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['decrypt']);
     const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.slice(16,28)},key,bytes.slice(28));
     url=URL.createObjectURL(new Blob([plain],{type:'application/octet-stream'}));
+    window.unlockOriginal=async bytes=>{
+      const originalKey=await crypto.subtle.deriveKey({name:'PBKDF2',salt:bytes.slice(0,16),iterations:600000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['decrypt']);
+      return crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.slice(16,28)},originalKey,bytes.slice(28));
+    };
   }catch(error){status.textContent=error.message==='download'?'Kunde inte hämta modellen. Försök igen.':'Fel lösenord eller modellen kunde inte låsas upp.';button.disabled=false;return;}
   document.getElementById('password').value='';window.unlockedModelUrl=url;
   document.body.classList.remove('locked');document.getElementById('gate').hidden=true;
