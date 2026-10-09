@@ -1,0 +1,44 @@
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {SparkRenderer,SplatMesh} from '@sparkjsdev/spark';
+const $=id=>document.getElementById(id),host=$('viewer');
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x000000,1);host.prepend(renderer.domElement);renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('aria-label','Dra för att rotera 3D-modellen');
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.01,100);camera.position.set(-.65,-.10,.85);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.dampingFactor=.035;orbit.rotateSpeed=.7;orbit.enablePan=false;orbit.minDistance=.6;orbit.maxDistance=4;orbit.maxPolarAngle=Math.PI/2-.04;orbit.autoRotateSpeed=1.6;orbit.autoRotate=true;orbit.target.set(0,-.55,0);
+scene.add(new SparkRenderer({renderer}));const root=new THREE.Group();scene.add(root);root.rotation.x=-Math.PI/2;
+const bounds=new THREE.Box3(new THREE.Vector3(-.3,-.45,-.84),new THREE.Vector3(.3,.45,-.2));const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
+// Ground height and extents come from the exported grid corners and dataparser transform.
+const floorY=-5.268843650817871*.15902833676530082;
+const halfGrid=5.555556*.15902833676530082;
+const wallDepth=4,wallMaterial=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true,depthTest:true});
+for(const side of [-1,1]){
+ const xWall=new THREE.Mesh(new THREE.PlaneGeometry(halfGrid*2,wallDepth),wallMaterial);xWall.rotation.y=Math.PI/2;xWall.position.set(side*halfGrid,floorY-wallDepth/2,0);scene.add(xWall);
+ const zWall=new THREE.Mesh(new THREE.PlaneGeometry(halfGrid*2,wallDepth),wallMaterial);zWall.position.set(0,floorY-wallDepth/2,side*halfGrid);scene.add(zWall);
+}
+const wire=new THREE.Box3Helper(bounds,0x009bc4);root.add(wire);wire.visible=false;
+const normals={front:new THREE.Vector3(0,-1,0),back:new THREE.Vector3(0,1,0),left:new THREE.Vector3(-1,0,0),right:new THREE.Vector3(1,0,0),top:new THREE.Vector3(0,0,1),bottom:new THREE.Vector3(0,0,-1)};
+let data=[{id:'motor',title:'Motor och drivning',text:'En exempelmarkör för produktens motor. Här kan produktteamet lägga in godkänd information, bilder eller en kort video.',face:'front',position:[.48,.22,.48]},{id:'filter',title:'Filter och anslutningar',text:'Visa en produktdetalj i sitt sammanhang. Klickbara markörer hjälper besökaren att utforska produkten från olika håll.',face:'left',position:[.4,.78,.78]},{id:'service',title:'Servicevy',text:'Den här markören hör till produktens baksida. Den visas när du roterar till rätt sida och göms när sidan vänds bort.',face:'back',position:[.5,.85,.48]},{id:'side',title:'Sidovy',text:'Markörer kopplas till en sida av en osynlig box. Själva markören kan placeras vid den detalj som ska beskrivas.',face:'left',position:[.13,.58,.48]},{id:'connections',title:'Anslutningar',text:'Exempel på innehåll för produktens andra sida. Text och markörposition kan anpassas i prototypen.',face:'right',position:[.9,.58,.48]},{id:'top',title:'Överblick',text:'En markör för produktens ovansida. Den visas bara när du betraktar den sidan av boxen.',face:'top',position:[.5,.65,.78]}];
+try{const saved=JSON.parse(localStorage.getItem('atlas-gs-grid-hotspots-v1'));if(Array.isArray(saved)&&saved.length===data.length&&saved.every(h=>normals[h.face]&&h.position?.length===3&&h.position.every(v=>Number.isFinite(v)&&v>=0&&v<=1)&&typeof h.title==='string'&&typeof h.text==='string'))data=saved;}catch{}
+let labels=true,selected=null,ready=false;
+const markers=data.map((h,i)=>{const b=document.createElement('button');b.className='marker';b.textContent='+';b.dataset.label=h.title;b.setAttribute('aria-label',h.title);b.style.opacity=0;b.disabled=true;b.onclick=()=>showCard(i);$('markers').append(b);return b;});
+function showCard(i){selected=i;$('card-title').textContent=data[i].title;$('card-text').textContent=data[i].text;$('card').hidden=false;markers.forEach((b,j)=>b.classList.toggle('selected',i===j));}
+function closeCard(){selected=null;$('card').hidden=true;markers.forEach(b=>b.classList.remove('selected'));}$('close').onclick=closeCard;
+$('labels').onclick=()=>{labels=!labels;$('labels').setAttribute('aria-pressed',labels);if(!labels)closeCard();};
+$('rotate').onclick=()=>{orbit.autoRotate=!orbit.autoRotate;$('rotate').setAttribute('aria-pressed',orbit.autoRotate);};
+$('reset').onclick=()=>{camera.position.set(-.65,-.10,.85);orbit.target.set(0,-.55,0);orbit.autoRotate=false;$('rotate').setAttribute('aria-pressed','false');orbit.update();closeCard();};
+$('settings').onclick=()=>{$('editor').hidden=!$('editor').hidden;closeCard();};$('editor-close').onclick=()=>{$('editor').hidden=true;};$('box-toggle').onchange=()=>{wire.visible=$('box-toggle').checked;};
+data.forEach((h,i)=>{const o=document.createElement('option');o.value=i;o.textContent=h.title;$('pick').append(o);});
+const sliders=['X','Y','Z'].map((label,i)=>{const l=document.createElement('label');l.textContent=`Position ${label}`;const s=document.createElement('input');s.type='range';s.min=0;s.max=100;s.step=1;s.setAttribute('aria-label',`Position ${label}`);l.append(s);$('sliders').append(l);s.oninput=()=>{data[+$('pick').value].position[i]=+s.value/100;save();};return s;});
+function save(){try{localStorage.setItem('atlas-gs-grid-hotspots-v1',JSON.stringify(data));}catch{}}
+function edit(){const h=data[+$('pick').value];$('title-input').value=h.title;$('text-input').value=h.text;$('face').value=h.face;sliders.forEach((s,i)=>s.value=h.position[i]*100);}$('pick').onchange=edit;edit();
+$('title-input').oninput=()=>{const i=+$('pick').value;data[i].title=$('title-input').value;markers[i].dataset.label=data[i].title;markers[i].setAttribute('aria-label',data[i].title);$('pick').options[i].textContent=data[i].title;if(selected===i)showCard(i);save();};$('text-input').oninput=()=>{const i=+$('pick').value;data[i].text=$('text-input').value;if(selected===i)showCard(i);save();};$('face').onchange=()=>{data[+$('pick').value].face=$('face').value;save();};
+$('download').onclick=()=>{const u=URL.createObjectURL(new Blob([JSON.stringify({schemaVersion:1,bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()},hotspots:data},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=u;a.download='atlas-hotspots.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
+const p=new THREE.Vector3(),facePoint=new THREE.Vector3(),toCamera=new THREE.Vector3(),localCamera=new THREE.Vector3();
+function updateMarkers(){if(!ready)return;root.updateMatrixWorld();localCamera.copy(camera.position);root.worldToLocal(localCamera);data.forEach((h,i)=>{const n=normals[h.face];facePoint.copy(center).add(new THREE.Vector3(n.x*size.x/2,n.y*size.y/2,n.z*size.z/2));toCamera.copy(localCamera).sub(facePoint).normalize();const facing=n.dot(toCamera);p.copy(bounds.min).add(new THREE.Vector3(h.position[0]*size.x,h.position[1]*size.y,h.position[2]*size.z));root.localToWorld(p);p.project(camera);const visible=labels&&facing>.015&&p.z>-1&&p.z<1&&Math.abs(p.x)<.97&&Math.abs(p.y)<.97;const b=markers[i];b.style.left=`${(p.x*.5+.5)*host.clientWidth}px`;b.style.top=`${(-p.y*.5+.5)*host.clientHeight}px`;b.style.opacity=visible?THREE.MathUtils.smoothstep(facing,.015,.16):0;b.style.pointerEvents=visible?'auto':'none';b.disabled=!visible;b.setAttribute('aria-hidden',!visible);if(!visible&&selected===i)closeCard();});}
+function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
+new ResizeObserver(resize).observe(host);resize();renderer.setAnimationLoop(()=>{orbit.update();updateMarkers();renderer.render(scene,camera);});
+try{const mesh=new SplatMesh({url:window.unlockedModelUrl});root.add(mesh);await mesh.initialized;ready=true;$('loading').hidden=true;window.viewerReady=true;window.viewerDebug={camera,orbit,data,root,updateMarkers,bounds,mesh}; URL.revokeObjectURL(window.unlockedModelUrl); delete window.unlockedModelUrl; const {loadOriginal}=await import("./original-loader-dark.js?v=1"); void loadOriginal({SplatMesh,root,preview:mesh,orbit,onSwap:original=>{window.viewerDebug.mesh=original;window.viewerDebug.originalLoaded=true;}});}catch(e){console.error(e);$('loading').innerHTML='<strong>Modellen kunde inte laddas</strong><span>Kontrollera anslutningen och använd en webbläsare med WebGL2.</span>';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeCard();$('editor').hidden=true;}});
+
+
+
