@@ -1,13 +1,17 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {SparkRenderer,SplatMesh} from '@sparkjsdev/spark';
+import {SparkRenderer,SplatMesh,SplatEdit,SplatEditSdf,SplatEditSdfType} from '@sparkjsdev/spark';
 const $=id=>document.getElementById(id),host=$('viewer');
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x000000,1);host.prepend(renderer.domElement);renderer.domElement.tabIndex=0;renderer.domElement.setAttribute('aria-label','Dra för att rotera 3D-modellen');
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.01,100);camera.position.set(-.65,-.10,.85);
-const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.dampingFactor=.035;orbit.rotateSpeed=.7;orbit.enablePan=false;orbit.minDistance=.6;orbit.maxDistance=4;orbit.maxPolarAngle=Math.PI/2-.04;orbit.autoRotateSpeed=1.6;orbit.autoRotate=true;orbit.target.set(0,-.55,0);
+const orbit=new OrbitControls(camera,renderer.domElement);orbit.enableDamping=true;orbit.dampingFactor=.035;orbit.rotateSpeed=.7;orbit.enablePan=false;orbit.minDistance=.6;orbit.maxDistance=4;orbit.maxPolarAngle=Math.PI/2-.04;orbit.autoRotateSpeed=1.6;orbit.autoRotate=true;orbit.target.set(0,-.64,0);
 scene.add(new SparkRenderer({renderer}));const root=new THREE.Group();scene.add(root);root.rotation.x=-Math.PI/2;
-const bounds=new THREE.Box3(new THREE.Vector3(-.3,-.45,-.84),new THREE.Vector3(.3,.45,-.2));const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
+const bounds=new THREE.Box3(new THREE.Vector3(-.22,-.28,-.84),new THREE.Vector3(.22,.28,-.43));const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
 // Ground height and extents come from the exported grid corners and dataparser transform.
+// Hide the disconnected cloud above the product without modifying either model file.
+const overheadMask=new SplatEdit({name:'Overhead stray splats',softEdge:.01});
+const overheadBox=new SplatEditSdf({type:SplatEditSdfType.BOX,opacity:0});
+overheadBox.position.set(0,1.825,0);overheadBox.scale.set(10,2.175,10);overheadMask.add(overheadBox);scene.add(overheadMask);
 const floorY=-5.268843650817871*.15902833676530082;
 const halfGrid=5.555556*.15902833676530082;
 const wallDepth=4,wallMaterial=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true,depthTest:true});
@@ -25,7 +29,7 @@ function showCard(i){selected=i;$('card-title').textContent=data[i].title;$('car
 function closeCard(){selected=null;$('card').hidden=true;markers.forEach(b=>b.classList.remove('selected'));}$('close').onclick=closeCard;
 $('labels').onclick=()=>{labels=!labels;$('labels').setAttribute('aria-pressed',labels);if(!labels)closeCard();};
 $('rotate').onclick=()=>{orbit.autoRotate=!orbit.autoRotate;$('rotate').setAttribute('aria-pressed',orbit.autoRotate);};
-$('reset').onclick=()=>{camera.position.set(-.65,-.10,.85);orbit.target.set(0,-.55,0);orbit.autoRotate=false;$('rotate').setAttribute('aria-pressed','false');orbit.update();closeCard();};
+$('reset').onclick=()=>{camera.position.set(-.65,-.10,.85);orbit.target.set(0,-.64,0);orbit.autoRotate=false;$('rotate').setAttribute('aria-pressed','false');orbit.update();closeCard();};
 $('settings').onclick=()=>{$('editor').hidden=!$('editor').hidden;closeCard();};$('editor-close').onclick=()=>{$('editor').hidden=true;};$('box-toggle').onchange=()=>{wire.visible=$('box-toggle').checked;};
 data.forEach((h,i)=>{const o=document.createElement('option');o.value=i;o.textContent=h.title;$('pick').append(o);});
 const sliders=['X','Y','Z'].map((label,i)=>{const l=document.createElement('label');l.textContent=`Position ${label}`;const s=document.createElement('input');s.type='range';s.min=0;s.max=100;s.step=1;s.setAttribute('aria-label',`Position ${label}`);l.append(s);$('sliders').append(l);s.oninput=()=>{data[+$('pick').value].position[i]=+s.value/100;save();};return s;});

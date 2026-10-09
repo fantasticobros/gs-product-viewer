@@ -17,5 +17,5 @@ form.addEventListener('submit',async event=>{
   }catch(error){status.textContent=error.message==='download'?'Kunde inte hämta modellen. Försök igen.':'Fel lösenord eller modellen kunde inte låsas upp.';button.disabled=false;return;}
   document.getElementById('password').value='';window.unlockedModelUrl=url;
   document.body.classList.remove('locked');document.getElementById('gate').hidden=true;
-  try{await import('./app-dark.js?v=1');}catch(error){document.getElementById('loading').textContent='Visningen kunde inte startas. Ladda om sidan och försök igen.';console.error(error);}
+  try{await import('./app-dark.js?v=3');}catch(error){document.getElementById('loading').textContent='Visningen kunde inte startas. Ladda om sidan och försök igen.';console.error(error);}
 });
