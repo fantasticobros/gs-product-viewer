@@ -4,7 +4,7 @@ import {SparkRenderer,SplatMesh,SplatEdit,SplatEditSdf,SplatEditSdfType} from '@
 const $=id=>document.getElementById(id),camera=new THREE.PerspectiveCamera(35,1,.01,100);
 const scale=.15902833676530082,floor=-5.268843650817871*scale;
 const sizes=new Map();
-const statsPromise=fetch('comparison-stats.json').then(r=>r.json()).then(stats=>{for(const name of ['left','right']){if(stats[name]){sizes.set(name,stats[name]);showStats(name,stats[name]);}}}).catch(console.error);
+const statsPromise=fetch(['127.0.0.1','localhost'].includes(location.hostname)?'comparison-local-stats.json':'comparison-stats.json').then(r=>r.json()).then(stats=>{for(const name of ['left','right']){if(stats[name]){sizes.set(name,stats[name]);showStats(name,stats[name]);}}}).catch(console.error);
 function showStats(name,stats){let element=$(name+'-metrics');if(!element){element=document.createElement('p');element.id=name+'-metrics';element.className='model-metrics';$(name+'-status').after(element);}const count=new Intl.NumberFormat('sv-SE').format(stats.splats),mb=bytes=>(bytes/1e6).toFixed(1).replace('.',',');element.textContent=stats.local?`${count} splats · Vald fil: ${mb(stats.bytes)} MB`:`${count} splats · Original: ${mb(stats.plyBytes)} MB · Webb: ${mb(stats.spzBytes)} MB`;}
 camera.position.set(-.65,-.10,.85);
 const sides=['left','right'].map(name=>{
@@ -20,6 +20,7 @@ const sides=['left','right'].map(name=>{
  $(name+'-file').onchange=async event=>{const file=event.target.files[0];if(!file)return;side.generation++;side.abort?.abort();const generation=side.generation;$(name+'-status').textContent=`Läser ${file.name} lokalt…`;try{const mesh=new SplatMesh({fileBytes:await file.arrayBuffer(),fileName:file.name});await mesh.initialized;if(generation!==side.generation){mesh.dispose();return;}install(side,mesh);$(name+'-status').textContent=`${file.name} · lokalt laddad`;}catch(error){$(name+'-status').textContent='Filen kunde inte öppnas. Den tidigare modellen behålls.';console.error(error);}};
  return side;
 });
+camera.position.set(-.65,-.10,.85);sides.forEach(side=>{side.controls.update();side.controls.saveState();});
 function align(side){side.root.position.set(0,0,0);side.root.rotation.set(0,0,0);side.root.scale.setScalar(1);const space=$(side.name+'-space').value;if(space==='splatfacto')side.root.rotation.x=-Math.PI/2;else if(space==='lichtfeld'){side.root.rotation.x=Math.PI;side.root.scale.setScalar(scale);side.root.position.set(-3.1789145538141383e-8*scale,floor,4.3710073782676773e-7*scale);}}
 function install(side,mesh){align(side);if(side.mesh){side.root.remove(side.mesh);side.mesh.dispose();}side.mesh=mesh;side.root.add(mesh);const selected=$(side.name+'-file').files[0];if(selected)showStats(side.name,{local:true,splats:mesh.numSplats,bytes:selected.size});}
 $('auto').onchange=()=>{sides[0].controls.autoRotate=$('auto').checked;};
